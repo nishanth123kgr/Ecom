@@ -1,6 +1,7 @@
 package com.ecommerce.app.filters;
 
 import com.ecommerce.app.exceptions.APIException;
+import com.ecommerce.app.utils.Utils;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpFilter;
@@ -10,10 +11,11 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class PathParamResolverFilter extends HttpFilter {
+public class ParamResolverFilter extends HttpFilter {
 
     private static HashMap<String, String> pathVariableKeyMap = new HashMap<>();
     private HttpServletRequest request;
@@ -33,11 +35,7 @@ public class PathParamResolverFilter extends HttpFilter {
         pathVariableKeyMap.put("discounts", "discountId");
     }
 
-    private String normalizeURI(String requestURI) {
-        String normalizedURI = requestURI.replaceFirst(request.getContextPath(), "");
-        normalizedURI = normalizedURI.replaceFirst("/api/v[0-9]+", "");
-        return normalizedURI;
-    }
+
 
     private HashMap<String, String> getPathVariablesMap(String requestURI) {
         HashMap<String, String> pathVariables = new HashMap<>();
@@ -62,14 +60,45 @@ public class PathParamResolverFilter extends HttpFilter {
         return pathVariables;
     }
 
+    private HashMap<String, String> getParams() {
+        HashMap<String, String> map = new HashMap<>();
+
+        for (Map.Entry<String, String[]> entry : request.getParameterMap().entrySet()) {
+            map.put(entry.getKey(), entry.getValue()[0]);
+        }
+
+        return map;
+    }
+
+    private HashMap<String, String> getQueryParams() {
+        HashMap<String, String> queryMap = new HashMap<>();
+
+        String queryString = request.getQueryString();
+
+        if (StringUtils.isNotEmpty(queryString)) {
+            for (String query : queryString.split("&")) {
+                String[] queryData = query.split("=");
+                queryMap.put(queryData[0], queryData[1]);
+            }
+        }
+
+        return queryMap;
+    }
+
 
     @Override
     protected void doFilter(HttpServletRequest req, HttpServletResponse res, FilterChain chain) throws IOException, ServletException {
         this.request = req;
-        String normalizedURI = normalizeURI(req.getRequestURI());
+        String normalizedURI = Utils.normalizeURI(req.getRequestURI(), req.getContextPath());
         if (!normalizedURI.startsWith("/auth")) {
             req.setAttribute("pathVariables", getPathVariablesMap(normalizedURI));
         }
+
+        req.setAttribute("params", getParams());
+
+        req.setAttribute("queryParams", getQueryParams());
+
+
         chain.doFilter(req, res);
     }
 }

@@ -1,15 +1,12 @@
 package com.ecommerce.app.exceptions;
 
-import org.json.JSONObject;
-
-import java.util.HashMap;
 
 public class APIException extends RuntimeException {
     private final int statusCode;
     private final String message;
-    private JSONObject extraDetails;
+    private Object extraDetails;
 
-    public APIException(int statusCode, String message, JSONObject extraDetails) {
+    public APIException(int statusCode, String message, Object extraDetails) {
         super(message);
         this.statusCode = statusCode;
         this.message = message;
@@ -22,12 +19,18 @@ public class APIException extends RuntimeException {
         this.message = message;
     }
 
+    public APIException(int statusCode, Exception exception) {
+        super(exception);
+        this.statusCode = statusCode;
+        this.message = exception.getLocalizedMessage();
+    }
+
     public APIException(ErrorCodes error, Object... args) {
         this(error.getStatusCode(), placeArgsInMessage(error.getMessage(), args));
     }
 
     private static String placeArgsInMessage(String errorMessage, Object... args) {
-        String errorMessageFormat = errorMessage.replaceAll("\\{[0-9]+}", "%S");
+        String errorMessageFormat = errorMessage.replaceAll("\\{[0-9]+}", "%s");
 
         return String.format(errorMessageFormat, args);
     }
@@ -41,7 +44,7 @@ public class APIException extends RuntimeException {
         return message;
     }
 
-    public JSONObject getExtraDetails() {
+    public Object getExtraDetails() {
         return extraDetails;
     }
 
