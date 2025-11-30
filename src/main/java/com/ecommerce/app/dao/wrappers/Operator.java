@@ -1,4 +1,4 @@
-package com.ecommerce.app.dao;
+package com.ecommerce.app.dao.wrappers;
 
 public enum Operator {
     EQUALS("="),

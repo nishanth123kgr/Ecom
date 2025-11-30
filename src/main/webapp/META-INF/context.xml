@@ -8,7 +8,7 @@
             maxWaitMillis="10000"
             driverClassName="org.postgresql.Driver"
             url="jdbc:postgresql://localhost:5432/ecommerce"
-            username="postgres"
-            password="root"
+            username="app_user"
+            password="appy_user"
     />
 </Context>

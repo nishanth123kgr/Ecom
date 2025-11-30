@@ -91,7 +91,7 @@ public class ParamResolverFilter extends HttpFilter {
         this.request = req;
         String normalizedURI = Utils.normalizeURI(req.getRequestURI(), req.getContextPath());
         if (!normalizedURI.startsWith("/auth")) {
-            req.setAttribute("pathVariables", getPathVariablesMap(normalizedURI));
+            req.setAttribute("pathParams", getPathVariablesMap(normalizedURI));
         }
 
         req.setAttribute("params", getParams());

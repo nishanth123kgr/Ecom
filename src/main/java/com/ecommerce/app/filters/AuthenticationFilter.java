@@ -13,6 +13,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 public class AuthenticationFilter extends HttpFilter {
 
@@ -31,21 +33,22 @@ public class AuthenticationFilter extends HttpFilter {
             throw new APIException(ErrorCodes.UNAUTHORIZED);
         }
 
-        boolean accessTokenFound = false;
         for (Cookie cookie : cookies) {
             if (cookie.getName().equals("accessToken")) {
                 String token = cookie.getValue();
                 DecodedJWT payload = JWTUtils.verifyJWT(token);
-                req.setAttribute("payload", payload);
-                accessTokenFound = true;
+                Map<String, Object> payloadMap = Utils.convertClaims(payload.getClaims());
+                req.setAttribute("payload", payloadMap);
+                Utils.setPayload((HashMap<String, Object>) payloadMap);
+                chain.doFilter(req, res);
+                Utils.clearThreadLocal();
+                return;
             }
         }
 
-        if (!accessTokenFound) {
-            throw new APIException(ErrorCodes.UNAUTHORIZED);
-        }
 
-        chain.doFilter(req, res);
+        throw new APIException(ErrorCodes.UNAUTHORIZED);
+
 
     }
 }

@@ -1,6 +1,7 @@
 package com.ecommerce.app.services;
 
 import com.ecommerce.app.dao.DAO;
+import com.ecommerce.app.dao.SellerDAO;
 import com.ecommerce.app.dao.UserDAO;
 import com.ecommerce.app.exceptions.APIException;
 import com.ecommerce.app.exceptions.ErrorCodes;
@@ -30,7 +31,7 @@ public class AuthService {
         params.put("password_hash", AuthUtils.generateHash((String) params.get("password")));
 
         DAO userDAO = new UserDAO();
-        return (Map<String, Object>) userDAO.create(params);
+        return userDAO.create(params);
     }
 
 
@@ -57,6 +58,16 @@ public class AuthService {
         if (isValid) {
 
             user.getFirst().remove("password_hash");
+
+            try {
+                int sellerId = new SellerDAO().getSellerIdByUserId((Integer) user.getFirst().get("id"));
+                user.getFirst().put("seller_id", sellerId);
+            } catch (APIException e) {
+                if (e.getStatus() != 404 || !e.getMessage().startsWith("Seller")) {
+                    throw e;
+                }
+            }
+
 
             return getTokens(user.getFirst());
 

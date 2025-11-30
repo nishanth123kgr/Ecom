@@ -1,8 +1,10 @@
 package com.ecommerce.app.dao;
 
+import com.ecommerce.app.dao.wrappers.Criteria;
 import com.ecommerce.app.exceptions.APIException;
 import com.ecommerce.app.exceptions.ErrorCodes;
 import com.ecommerce.app.utils.JSONUtils;
+import com.ecommerce.app.utils.Utils;
 import org.apache.commons.lang3.StringUtils;
 
 import javax.naming.InitialContext;
@@ -41,52 +43,104 @@ public abstract class DAO {
                 " where " +
                 criteria;
 
-        Function<Connection, Object> selectFunction = (con) -> {
-            try (PreparedStatement stmt = con.prepareStatement(selectQuery)) {
+        Function<Connection, Object> selectFunction = (con) -> executeSelectQuery(currentCriteria, selectQuery, con);
 
-                int placeHolderCount = 1;
-
-                Criteria c = currentCriteria;
-
-                while (c != null) {
-                    Object value = c.getValue();
-                    if (value instanceof String) {
-                        stmt.setString(placeHolderCount++, (String) value);
-                    } else if (value instanceof Integer) {
-                        stmt.setInt(placeHolderCount++, (Integer) value);
-                    } else if (value instanceof Float) {
-                        stmt.setFloat(placeHolderCount++, (Float) value);
-                    } else if (value instanceof Date) {
-                        stmt.setDate(placeHolderCount++, (Date) value);
-                    }
-                    c = c.getAnotherCriteria();
-                }
-
-                ResultSet resultSet = stmt.executeQuery();
-
-                return JSONUtils.getListFromResultSet(resultSet);
-
-
-            } catch (SQLException e) {
-                e.printStackTrace();
-                throw new APIException(ErrorCodes.INTERNAL_SERVER_ERROR);
-            }
-        };
-
-        return execute(selectFunction);
+        return execute(selectFunction, Utils.getUserID(), Utils.isAdmin());
     }
 
-    protected Object execute(Function<Connection, Object> executeQueryFunction) {
+    private Object executeSelectQuery(Criteria currentCriteria, String selectQuery, Connection con) {
+        try (PreparedStatement stmt = con.prepareStatement(selectQuery)) {
+
+            int placeHolderCount = 1;
+
+            Criteria c = currentCriteria;
+
+            while (c != null) {
+                Object value = c.getValue();
+                if (value instanceof String) {
+                    stmt.setString(placeHolderCount++, (String) value);
+                } else if (value instanceof Integer) {
+                    stmt.setInt(placeHolderCount++, (Integer) value);
+                } else if (value instanceof Float) {
+                    stmt.setFloat(placeHolderCount++, (Float) value);
+                } else if (value instanceof Date) {
+                    stmt.setDate(placeHolderCount++, (Date) value);
+                }
+                c = c.getAnotherCriteria();
+            }
+
+            ResultSet resultSet = stmt.executeQuery();
+
+            return JSONUtils.getListFromResultSet(resultSet);
+
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new APIException(ErrorCodes.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    protected Object getDataFromTable(Connection con, String tableName, List<String> columns, Criteria criteria, String... extras) {
+
+        if (StringUtils.isEmpty(tableName) || columns.isEmpty()) {
+            throw new APIException(ErrorCodes.INVALID_ARGUMENT);
+        }
+
+        Criteria currentCriteria = criteria;
+
+        String selectQuery = "SELECT " +
+                String.join(columns.size() == 1 ? "" : ", ", columns) +
+                " from " +
+                tableName +
+                " where " +
+                criteria +
+                (extras.length > 0 ? " " + extras[0] : "");
+
+
+        return executeSelectQuery(currentCriteria, selectQuery, con);
+    }
+
+    protected Object execute(Function<Connection, Object> executeQueryFunction, int userId) {
+        return execute(executeQueryFunction, userId, false);
+    }
+
+
+    protected Object execute(Function<Connection, Object> executeQueryFunction, int userId, boolean isAdmin) {
         InitialContext ic = null;
         try {
             ic = new InitialContext();
             DataSource ds = (DataSource) ic.lookup("java:comp/env/jdbc/EcommerceDB");
             try (Connection con = ds.getConnection()) {
-                return executeQueryFunction.apply(con);
+                con.setAutoCommit(false);
+                setRLS(con, userId, isAdmin);
+                Object data = executeQueryFunction.apply(con);
+                con.commit();
+
+                return data;
             }
 
         } catch (NamingException | SQLException e) {
             throw new RuntimeException(e);
         }
+
     }
+
+    private void setRLS(Connection con, int userId, boolean isAdmin) {
+        try (Statement stmt = con.createStatement()) {
+            stmt.execute("SET \"app.current_user\" = '" + userId + "'");
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+        try (Statement stmt = con.createStatement()) {
+            stmt.execute("SET \"app.current_user_is_admin\" = '" + isAdmin + "'");
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void setRLS(Connection con, int userId) {
+        setRLS(con, userId, false);
+    }
+
 }

@@ -1,14 +1,16 @@
 package com.ecommerce.app.dao;
 
+import com.ecommerce.app.dao.wrappers.Criteria;
+import com.ecommerce.app.dao.wrappers.Operator;
 import com.ecommerce.app.exceptions.APIException;
 import com.ecommerce.app.exceptions.ErrorCodes;
 import com.ecommerce.app.utils.JSONUtils;
+import com.ecommerce.app.utils.Utils;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -18,7 +20,39 @@ public class UserDAO extends DAO {
 
     @Override
     public List<Map<String, Object>> readAll(Map<String, Object> query) {
-        return List.of();
+        String sql = "SELECT " +
+                "u.id          AS user_id, " +
+                "u.name        AS user_name, " +
+                "u.email       AS user_email, " +
+                "u.is_active   AS user_is_active, " +
+                "u.mobile_number      AS user_mobile_number, " +
+                "u.role AS user_role, " +
+                "a.id          AS address_id, " +
+                "a.country     AS address_country, " +
+                "a.state       AS address_state, " +
+                "a.city        AS address_city, " +
+                "a.street     AS address_street, " +
+                "a.postal_code AS address_postal_code " +
+                "FROM USERS u " +
+                "LEFT JOIN ADDRESSES a ON u.id = a.user_id ";
+
+        Function<Connection, Object> getUsers = (Connection con) -> {
+
+            try (PreparedStatement stmt = con.prepareStatement(sql)) {
+
+                ResultSet userRS = stmt.executeQuery();
+
+                return JSONUtils.getListFromResultSet(userRS);
+
+
+            } catch (SQLException e) {
+                e.printStackTrace();
+                throw new APIException(ErrorCodes.INTERNAL_SERVER_ERROR);
+            }
+
+        };
+
+        return (List<Map<String, Object>>) execute(getUsers, Utils.getUserID(), true);
     }
 
     @Override
@@ -32,7 +66,25 @@ public class UserDAO extends DAO {
         String key = query.containsKey("email") ? "email" : "userId";
         String column = allowedColumns.get(key);
 
-        String sql = String.format("SELECT * FROM USERS u LEFT JOIN ADDRESSES a ON u.id = a.user_id WHERE %s = ?", column);
+        String sql = String.format(
+                "SELECT " +
+                        "u.id          AS user_id, " +
+                        "u.name        AS user_name, " +
+                        "u.email       AS user_email, " +
+                        "u.is_active   AS user_is_active, " +
+                        "u.mobile_number      AS user_mobile_number, " +
+                        "u.role AS user_role, " +
+                        "a.id          AS address_id, " +
+                        "a.country     AS address_country, " +
+                        "a.state       AS address_state, " +
+                        "a.city        AS address_city, " +
+                        "a.street     AS address_street, " +
+                        "a.postal_code AS address_postal_code " +
+                        "FROM USERS u " +
+                        "LEFT JOIN ADDRESSES a ON u.id = a.user_id " +
+                        "WHERE %s = ?",
+                column
+        );
 
         Function<Connection, Object> getUser = (Connection con) -> {
 
@@ -56,13 +108,13 @@ public class UserDAO extends DAO {
 
         };
 
-        return (List<Map<String, Object>>) execute(getUser);
+        return (List<Map<String, Object>>) execute(getUser, Utils.getUserID(), Utils.isAdmin());
     }
 
     @Override
     public Map<String, Object> create(Map<String, Object> data) {
 
-        String query = "INSERT INTO USERS (name, email, password_hash, role, mobile_number) values (?, ?, ?, ?, ?);";
+        String query = "select * from register_user(?, ?, ?, ?, ?);";
 
         Function<Connection, Object> createUserFunction = (Connection con) -> {
 
@@ -74,26 +126,17 @@ public class UserDAO extends DAO {
                 statement.setString(5, (String) data.get("mobile_number"));
 
 
-                if (statement.executeUpdate() > 0) {
-                    String getUserId = "SELECT id FROM USERS WHERE email = ?";
-                    try (PreparedStatement getUserIdQuery = con.prepareStatement(getUserId)) {
-                        getUserIdQuery.setString(1, (String) data.get("email"));
-                        ResultSet idResultSet = getUserIdQuery.executeQuery();
-                        idResultSet.next();
-                        return JSONUtils.getRowMapFromResultSet(idResultSet);
-                    }
-
-
-                }
+                ResultSet idResultSet = statement.executeQuery();
+                idResultSet.next();
+                return JSONUtils.getRowMapFromResultSet(idResultSet);
 
 
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }
-            return new HashMap<>();
         };
 
-        return (Map<String, Object>) execute(createUserFunction);
+        return (Map<String, Object>) execute(createUserFunction, -1);
     }
 
     @Override
@@ -111,7 +154,7 @@ public class UserDAO extends DAO {
     }
 
     public List<Map<String, Object>> getUserByEmail(String email, List<String> columns) {
-        return (List<Map<String, Object>>) getDataFromTable("users", columns, new Criteria("email", email, Operator.EQUALS));
+        return (List<Map<String, Object>>) getDataFromTable("login_user('" + email + "')", columns, new Criteria("email", email, Operator.EQUALS));
     }
 
 

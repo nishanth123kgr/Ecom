@@ -29,11 +29,11 @@ public class ResponseFilter extends HttpFilter {
             response = (Response) req.getAttribute("response");
         } catch (APIException e) {
             e.printStackTrace();
-            response = new Response(e.getStatusCode(), e.getMessage(), e.getExtraDetails());
+            response = new Response(e.getStatus(), e.getMessage(), e.getExtraDetails());
         }
 
         if (response != null) {
-            res.setStatus(response.statusCode());
+            res.setStatus(response.status());
             writeResponseAsJSON(res, response);
         }
     }

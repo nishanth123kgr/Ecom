@@ -9,20 +9,21 @@ public enum ErrorCodes {
     INVALID_PARAM(400, "{1} is Invalid"),
     NOT_FOUND(404, "{1} not found."),
     UNAUTHORIZED(401, "Invalid User"),
-    FORBIDDEN(403, "Insufficient Permissions");
+    FORBIDDEN(403, "Insufficient Permissions"),
+    METHOD_NOT_ALLOWED(405, "{1} method not allowed");
 
 
 
-    private final int statusCode;
+    private final int status;
     private final String message;
 
-    ErrorCodes(int statusCode, String message) {
-        this.statusCode = statusCode;
+    ErrorCodes(int status, String message) {
+        this.status = status;
         this.message = message;
     }
 
-    public int getStatusCode() {
-        return statusCode;
+    public int getStatus() {
+        return status;
     }
 
     public String getMessage() {

@@ -2,31 +2,35 @@ package com.ecommerce.app.exceptions;
 
 
 public class APIException extends RuntimeException {
-    private final int statusCode;
+    private final int status;
     private final String message;
     private Object extraDetails;
 
-    public APIException(int statusCode, String message, Object extraDetails) {
+    public APIException(int status, String message, Object extraDetails) {
         super(message);
-        this.statusCode = statusCode;
+        this.status = status;
         this.message = message;
         this.extraDetails = extraDetails;
     }
 
-    public APIException(int statusCode, String message) {
+    public APIException(int status, String message) {
         super(message);
-        this.statusCode = statusCode;
+        this.status = status;
         this.message = message;
     }
 
-    public APIException(int statusCode, Exception exception) {
+    public APIException(int status, Exception exception) {
         super(exception);
-        this.statusCode = statusCode;
+        this.status = status;
         this.message = exception.getLocalizedMessage();
     }
 
     public APIException(ErrorCodes error, Object... args) {
-        this(error.getStatusCode(), placeArgsInMessage(error.getMessage(), args));
+        this(error.getStatus(), placeArgsInMessage(error.getMessage(), args));
+    }
+
+    public APIException() {
+        this(ErrorCodes.INTERNAL_SERVER_ERROR);
     }
 
     private static String placeArgsInMessage(String errorMessage, Object... args) {
@@ -36,8 +40,8 @@ public class APIException extends RuntimeException {
     }
 
 
-    public int getStatusCode() {
-        return statusCode;
+    public int getStatus() {
+        return status;
     }
 
     public String getMessage() {
