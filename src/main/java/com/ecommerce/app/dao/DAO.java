@@ -57,14 +57,18 @@ public abstract class DAO {
 
             while (c != null) {
                 Object value = c.getValue();
-                if (value instanceof String) {
-                    stmt.setString(placeHolderCount++, (String) value);
-                } else if (value instanceof Integer) {
-                    stmt.setInt(placeHolderCount++, (Integer) value);
-                } else if (value instanceof Float) {
-                    stmt.setFloat(placeHolderCount++, (Float) value);
-                } else if (value instanceof Date) {
-                    stmt.setDate(placeHolderCount++, (Date) value);
+                switch (value) {
+                    case String s -> stmt.setString(placeHolderCount++, s);
+                    case Integer i -> stmt.setInt(placeHolderCount++, i);
+                    case Long l -> stmt.setLong(placeHolderCount++, l);
+                    case Double v -> stmt.setDouble(placeHolderCount++, v);
+                    case Float v -> stmt.setFloat(placeHolderCount++, v);
+                    case Short i -> stmt.setShort(placeHolderCount++, i);
+                    case Boolean b -> stmt.setBoolean(placeHolderCount++, b);
+                    case Date date -> stmt.setDate(placeHolderCount++, date);
+                    case Timestamp timestamp -> stmt.setTimestamp(placeHolderCount++, timestamp);
+                    case java.util.Date date -> stmt.setTimestamp(placeHolderCount++, new Timestamp(date.getTime()));
+                    default -> stmt.setObject(placeHolderCount++, value);
                 }
                 c = c.getAnotherCriteria();
             }
@@ -141,6 +145,13 @@ public abstract class DAO {
 
     private void setRLS(Connection con, int userId) {
         setRLS(con, userId, false);
+    }
+
+    protected List<Map<String, Object>> readALL(Map<String, Object> query) {
+
+
+        return null;
+
     }
 
 }

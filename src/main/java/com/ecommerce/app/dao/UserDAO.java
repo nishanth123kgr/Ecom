@@ -52,7 +52,7 @@ public class UserDAO extends DAO {
 
         };
 
-        return (List<Map<String, Object>>) execute(getUsers, Utils.getUserID(), true);
+        return (List<Map<String, Object>>) execute(getUsers, Utils.getUserID(), Utils.isAdmin());
     }
 
     @Override

@@ -12,7 +12,7 @@ public class RequestService {
 
     public Map<String, Object> createRequest(Map<String, Object> params) {
 
-        Utils.checkMandatoryFields(params, List.of("store_name", "store_description", "gst_number", "pan_number"));
+        Utils.checkMandatoryFields(params, List.of("store_name", "store_description", "gst_number", "pan_number", "request_description"));
 
         return new RequestDAO().create(params);
 

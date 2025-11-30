@@ -4,12 +4,14 @@ import com.ecommerce.app.dao.wrappers.Criteria;
 import com.ecommerce.app.dao.wrappers.Operator;
 import com.ecommerce.app.exceptions.APIException;
 import com.ecommerce.app.exceptions.ErrorCodes;
+import com.ecommerce.app.utils.JSONUtils;
 import com.ecommerce.app.utils.Utils;
 import org.postgresql.util.PSQLException;
 import org.postgresql.util.ServerErrorMessage;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
@@ -29,65 +31,79 @@ public class RequestDAO extends DAO {
 
     @Override
     public Map<String, Object> create(Map<String, Object> data) {
-        int userId = Utils.getUserID();
         String gstNumber = (String) data.get("gst_number");
         String panNumber = (String) data.get("pan_number");
         Function<Connection, Object> createRequest = connection -> {
             try {
-                String sellerInsertQuery = "INSERT INTO SELLERS (STORE_NAME, STORE_DESC, GST_NUMBER, PAN_NUMBER, USER_ID) VALUES (?,?,?,?,?);";
+//                String sellerInsertQuery = "INSERT INTO SELLERS (STORE_NAME, STORE_DESC, GST_NUMBER, PAN_NUMBER, USER_ID) VALUES (?,?,?,?,?);";
 
-                try (PreparedStatement stmt = connection.prepareStatement(sellerInsertQuery)) {
+                String createSellerRequest = "Select * from create_seller_request(?, ?, ?, ?, ?);";
+
+                try (PreparedStatement stmt = connection.prepareStatement(createSellerRequest)) {
 
                     stmt.setString(1, (String) data.get("store_name"));
                     stmt.setString(2, (String) data.get("store_description"));
                     stmt.setString(3, gstNumber);
                     stmt.setString(4, panNumber);
-                    stmt.setInt(5, userId);
+                    stmt.setString(5, (String) data.get("request_description"));
 
-                    int sellerInsertStatus = stmt.executeUpdate();
+                    ResultSet rs = stmt.executeQuery();
 
-                    if (sellerInsertStatus < 1) {
-                        throw new SQLException("Seller Request Creation Failed");
+                    rs.next();
+
+                    Map<String, Object> result = JSONUtils.getRowMapFromResultSet(rs);
+
+                    if (!(boolean) result.get("success")) {
+                        throw new APIException(ErrorCodes.CUSTOM_CLIENT_ERROR, result.get("message"));
                     }
 
-                    int sellerId = new SellerDAO().getSellerIdByUserId(userId, connection);
+                    return result;
 
-                    String requestInsertQuery = "INSERT INTO REQUESTS (SELLER_ID) VALUES (?);";
-
-                    try (PreparedStatement reqStmt = connection.prepareStatement(requestInsertQuery)) {
-                        reqStmt.setInt(1, sellerId);
-
-                        int requestInsertStatus = reqStmt.executeUpdate();
-
-                        if (requestInsertStatus < 1) {
-                            throw new SQLException("Seller Request Creation Failed _");
-                        }
-
-                        String updateUserRole = "update users set role = 'seller' where id = ?";
-
-                        try (PreparedStatement updateUserStmt = connection.prepareStatement(updateUserRole)) {
-                            updateUserStmt.setInt(1, userId);
-
-                            if (updateUserStmt.executeUpdate() < 1) {
-                                throw new SQLException("Seller Request Creation Failed _");
-                            }
-
-                        }
-
-                        Map<String, Object> requestIdMap = getLatestRequestId(sellerId, connection);
-                        requestIdMap.put("seller_id", sellerId);
-
-                        connection.commit();
-
-                        return requestIdMap;
-
-                    }
+//                    int sellerInsertStatus = stmt.executeUpdate();
+//
+//                    if (sellerInsertStatus < 1) {
+//                        throw new SQLException("Seller Request Creation Failed");
+//                    }
+//
+//                    int sellerId = new SellerDAO().getSellerIdByUserId(userId, connection);
+//
+//                    String requestInsertQuery = "INSERT INTO REQUESTS (SELLER_ID) VALUES (?);";
+//
+//                    try (PreparedStatement reqStmt = connection.prepareStatement(requestInsertQuery)) {
+//                        reqStmt.setInt(1, sellerId);
+//
+//                        int requestInsertStatus = reqStmt.executeUpdate();
+//
+//                        if (requestInsertStatus < 1) {
+//                            throw new SQLException("Seller Request Creation Failed _");
+//                        }
+//
+//                        String updateUserRole = "update users set role = 'seller' where id = ?";
+//
+//                        try (PreparedStatement updateUserStmt = connection.prepareStatement(updateUserRole)) {
+//                            updateUserStmt.setInt(1, userId);
+//
+//                            if (updateUserStmt.executeUpdate() < 1) {
+//                                throw new SQLException("Seller Request Creation Failed _");
+//                            }
+//
+//                        }
+//
+//                        Map<String, Object> requestIdMap = getLatestRequestId(sellerId, connection);
+//                        requestIdMap.put("seller_id", sellerId);
+//
+//                        connection.commit();
+//
+//                        return requestIdMap;
+//
+//                    }
 
 
                 }
 
 
             } catch (PSQLException e) {
+                e.printStackTrace();
                 Utils.safeRollBack(connection);
 
                 String sqlState = e.getSQLState();

@@ -21,17 +21,6 @@ public class UserController extends HttpServlet {
 
         Map<String, Object> pathParams = Utils.getPathParams(req);
 
-        Map<String, Object> payload = Utils.getPayload(req);
-
-        Integer paramID = Integer.parseInt((String) pathParams.get("userId"));
-
-        Integer payloadID = (Integer) payload.get("id");
-
-//        if (!paramID.equals(payloadID)) {
-//            throw new APIException(ErrorCodes.FORBIDDEN);
-//        }
-
-
         Map<String, Object> user = service.getUser(pathParams);
 
         req.setAttribute("response", new Response(200, user));
