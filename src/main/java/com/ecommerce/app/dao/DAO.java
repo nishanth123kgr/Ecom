@@ -11,6 +11,7 @@ import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.sql.DataSource;
 import java.sql.*;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -23,12 +24,12 @@ public abstract class DAO {
 
     public abstract Map<String, Object> create(Map<String, Object> data);
 
-    public abstract List<Map<String, Object>> update(Map<String, String> data);
+    public abstract List<Map<String, Object>> update(Map<String, Object> data, Map<String, Object> criteria);
 
-    public abstract boolean delete(Map<String, String> data);
+    public abstract boolean delete(Map<String, Object> data);
 
 
-    public Object getDataFromTable(String tableName, List<String> columns, Criteria criteria) {
+    public Object getDataFromTable(String tableName, List<String> columns, Criteria criteria, String... extras) {
 
         if (StringUtils.isEmpty(tableName) || columns.isEmpty()) {
             throw new APIException(ErrorCodes.INVALID_ARGUMENT);
@@ -41,7 +42,8 @@ public abstract class DAO {
                 " from " +
                 tableName +
                 " where " +
-                criteria;
+                (criteria == null ? "1 = 1" : criteria) +
+                (extras.length > 0 ? String.join(" ", extras) : "");
 
         Function<Connection, Object> selectFunction = (con) -> executeSelectQuery(currentCriteria, selectQuery, con);
 
@@ -57,19 +59,7 @@ public abstract class DAO {
 
             while (c != null) {
                 Object value = c.getValue();
-                switch (value) {
-                    case String s -> stmt.setString(placeHolderCount++, s);
-                    case Integer i -> stmt.setInt(placeHolderCount++, i);
-                    case Long l -> stmt.setLong(placeHolderCount++, l);
-                    case Double v -> stmt.setDouble(placeHolderCount++, v);
-                    case Float v -> stmt.setFloat(placeHolderCount++, v);
-                    case Short i -> stmt.setShort(placeHolderCount++, i);
-                    case Boolean b -> stmt.setBoolean(placeHolderCount++, b);
-                    case Date date -> stmt.setDate(placeHolderCount++, date);
-                    case Timestamp timestamp -> stmt.setTimestamp(placeHolderCount++, timestamp);
-                    case java.util.Date date -> stmt.setTimestamp(placeHolderCount++, new Timestamp(date.getTime()));
-                    default -> stmt.setObject(placeHolderCount++, value);
-                }
+                setValueInPreparedStatement(value, stmt, placeHolderCount++);
                 c = c.getAnotherCriteria();
             }
 
@@ -81,6 +71,22 @@ public abstract class DAO {
         } catch (SQLException e) {
             e.printStackTrace();
             throw new APIException(ErrorCodes.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private static void setValueInPreparedStatement(Object value, PreparedStatement stmt, int placeHolderCount) throws SQLException {
+        switch (value) {
+            case String s -> stmt.setString(placeHolderCount, s);
+            case Integer i -> stmt.setInt(placeHolderCount, i);
+            case Long l -> stmt.setLong(placeHolderCount, l);
+            case Double v -> stmt.setDouble(placeHolderCount, v);
+            case Float v -> stmt.setFloat(placeHolderCount, v);
+            case Short i -> stmt.setShort(placeHolderCount, i);
+            case Boolean b -> stmt.setBoolean(placeHolderCount, b);
+            case Date date -> stmt.setDate(placeHolderCount, date);
+            case Timestamp timestamp -> stmt.setTimestamp(placeHolderCount, timestamp);
+            case java.util.Date date -> stmt.setTimestamp(placeHolderCount, new Timestamp(date.getTime()));
+            default -> stmt.setObject(placeHolderCount, value);
         }
     }
 
@@ -143,15 +149,90 @@ public abstract class DAO {
         }
     }
 
-    private void setRLS(Connection con, int userId) {
-        setRLS(con, userId, false);
+    protected List<Map<String, Object>> update(String tableName, Map<String, Object> data, Criteria criteria) {
+
+        StringBuilder queryBuilder = new StringBuilder("update " + tableName + " ");
+        for (Map.Entry<String, Object> entry : data.entrySet()) {
+            queryBuilder.append("set ").append(entry.getKey()).append(" = ? ");
+        }
+        queryBuilder.append(criteria == null ? "" : "where " + criteria);
+
+        String query = queryBuilder.toString();
+
+        Criteria cri = criteria;
+
+        Function<Connection, Object> updateQuery = con -> {
+            try (PreparedStatement updateStatement = con.prepareStatement(query)) {
+                int placeHolder = 1;
+
+                for (Object value : data.values()) {
+                    setValueInPreparedStatement(Utils.cast(value.toString()), updateStatement, placeHolder++);
+                }
+
+                Criteria c = cri;
+                while (c != null) {
+                    setValueInPreparedStatement(Utils.cast(c.getValue().toString()), updateStatement, placeHolder++);
+                    c = c.getAnotherCriteria();
+                }
+                int update = updateStatement.executeUpdate();
+
+                Map<String, Object> map = new HashMap<>();
+
+                if (update > 0) {
+                    map.put("success", true);
+                    map.put("message", "Update Successful");
+
+                } else {
+                    map.put("success", false);
+                    map.put("message", "Update Failed");
+                }
+
+                return List.of(map);
+
+
+            } catch (SQLException e) {
+                e.printStackTrace();
+                throw new APIException(ErrorCodes.INTERNAL_SERVER_ERROR);
+            }
+        };
+
+
+        return (List<Map<String, Object>>) execute(updateQuery, Utils.getUserID(), Utils.isAdmin());
     }
 
-    protected List<Map<String, Object>> readALL(Map<String, Object> query) {
+    protected boolean delete(String tableName, Criteria criteria) {
+
+        if (criteria == null) {
+            throw new APIException(ErrorCodes.CUSTOM_CLIENT_ERROR, "No Criteria Specified");
+        }
+
+        String query = "delete from " + tableName + " where " + criteria;
+
+        Criteria cri = criteria;
+
+        Function<Connection, Object> deleteQuery = con -> {
+            try (PreparedStatement deleteStatement = con.prepareStatement(query)) {
+                int placeHolder = 1;
+
+                Criteria c = cri;
+                while (c != null) {
+                    setValueInPreparedStatement(Utils.cast(c.getValue().toString()), deleteStatement, placeHolder++);
+                    c = c.getAnotherCriteria();
+                }
+                int deleteCount = deleteStatement.executeUpdate();
+
+                return deleteCount > 0;
 
 
-        return null;
+            } catch (SQLException e) {
+                e.printStackTrace();
+                throw new APIException(ErrorCodes.INTERNAL_SERVER_ERROR);
+            }
+        };
 
+
+        return (boolean) execute(deleteQuery, Utils.getUserID(), Utils.isAdmin());
     }
+
 
 }

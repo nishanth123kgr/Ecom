@@ -26,8 +26,10 @@ public class Utils {
     public static String ACCESS_TOKEN = "accessToken";
     public static String REFRESH_TOKEN = "refreshToken";
 
-    public static boolean isValidEmail(String email) {
-        return EmailValidator.getInstance().isValid(email);
+    public static HttpServletRequest request = null;
+
+    public static boolean isNotValidEmail(String email) {
+        return !EmailValidator.getInstance().isValid(email);
     }
 
     public static void checkMandatoryFields(Map<String, Object> params, List<String> MANDATORY_FIELDS) {
@@ -40,6 +42,23 @@ public class Utils {
                 throw new APIException(ErrorCodes.INVALID_PARAM, field);
             }
         }
+    }
+
+    public static void checkAnyFieldExists(Map<String, Object> params, List<String> FIELDS) {
+        if (params.isEmpty()) {
+            throw new APIException(ErrorCodes.MISSING_PARAM, "Update param");
+        }
+
+        for (String field : FIELDS) {
+            if (params.containsKey(field)) {
+                Object value = params.get(field);
+                if (value instanceof String && StringUtils.isEmpty((String) value)) {
+                    throw new APIException(ErrorCodes.INVALID_PARAM, field);
+                }
+                return;
+            }
+        }
+        throw new APIException(ErrorCodes.MISSING_PARAM, "Update Params");
     }
 
     public static String normalizeURI(String requestURI, String contextPath) {
@@ -83,7 +102,7 @@ public class Utils {
 
         resp.addCookie(accessCookie);
         resp.addCookie(refreshCookie);
-        req.setAttribute("response", res);
+        Utils.setResponse(res);
 
 
         JedisPool pool = (JedisPool) req.getServletContext().getAttribute("JEDIS_POOL");
@@ -108,20 +127,20 @@ public class Utils {
         jedis.srem("rftk:" + email, "rftks:" + key);
     }
 
-    public static Map<String, Object> getParams(HttpServletRequest request) {
-        return (Map<String, Object>) request.getAttribute("params");
+    public static Map<String, Object> getParams() {
+        return (Map<String, Object>) getRequest().getAttribute("params");
     }
 
-    public static Map<String, Object> getQueryParams(HttpServletRequest request) {
-        return (Map<String, Object>) request.getAttribute("queryParams");
+    public static Map<String, Object> getQueryParams() {
+        return (Map<String, Object>) getRequest().getAttribute("queryParams");
     }
 
-    public static Map<String, Object> getPathParams(HttpServletRequest request) {
-        return (Map<String, Object>) request.getAttribute("pathParams");
+    public static Map<String, Object> getPathParams() {
+        return (Map<String, Object>) getRequest().getAttribute("pathParams");
     }
 
-    public static Map<String, Object> getPayload(HttpServletRequest request) {
-        return (Map<String, Object>) request.getAttribute("payload");
+    public static Map<String, Object> getPayload() {
+        return (Map<String, Object>) getRequest().getAttribute("payload");
     }
 
 
@@ -133,12 +152,12 @@ public class Utils {
         }
     }
 
-    public static JedisPool getJedisPool(HttpServletRequest request) {
-        return (JedisPool) request.getServletContext().getAttribute("JEDIS_POOL");
+    public static JedisPool getJedisPool() {
+        return (JedisPool) getRequest().getServletContext().getAttribute("JEDIS_POOL");
     }
 
-    public static Cookie getCookie(HttpServletRequest request, String tokenName) {
-        Cookie[] cookies = request.getCookies();
+    public static Cookie getCookie(String tokenName) {
+        Cookie[] cookies = getRequest().getCookies();
 
         if (cookies == null) {
             throw new APIException(ErrorCodes.UNAUTHORIZED);
@@ -166,10 +185,33 @@ public class Utils {
         }
     }
 
+    public static void setRequest(HttpServletRequest request) {
+        Map<String, Object> threadLocal = payload.get();
+        if (threadLocal != null) {
+            threadLocal.put("request", request);
+        }
+    }
+
+    public static HttpServletRequest getRequest() {
+        Map<String, Object> threadLocal = payload.get();
+        if (threadLocal != null) {
+            return (HttpServletRequest) threadLocal.get("request");
+        }
+        return null;
+    }
+
     public static Integer getUserID() {
         Map<String, Object> threadLocal = payload.get();
         if (threadLocal != null) {
-            return (Integer) threadLocal.get("id");
+            return (Integer) threadLocal.getOrDefault("id", 0);
+        }
+        return 0;
+    }
+
+    public static Integer getSellerID() {
+        Map<String, Object> threadLocal = payload.get();
+        if (threadLocal != null) {
+            return (Integer) threadLocal.getOrDefault("seller_id", 0);
         }
         return 0;
     }
@@ -177,9 +219,17 @@ public class Utils {
     public static String getRole() {
         Map<String, Object> threadLocal = payload.get();
         if (threadLocal != null) {
-            return (String) threadLocal.get("role");
+            return (String) threadLocal.getOrDefault("role", "user");
         }
         return "user";
+    }
+
+    public static String getEmail() {
+        Map<String, Object> threadLocal = payload.get();
+        if (threadLocal != null) {
+            return (String) threadLocal.get("email");
+        }
+        return null;
     }
 
     public static boolean isAdmin() {
@@ -187,15 +237,120 @@ public class Utils {
     }
 
     public static boolean isSeller() {
-        return getRole().equals("user");
+        return getRole().equals("seller");
     }
 
     public static void setPayload(HashMap<String, Object> payloadData) {
-        payload.set(payloadData);
+        if (payload.get() != null) {
+            payload.get().putAll(payloadData);
+        } else {
+            payload.set(payloadData);
+        }
+
     }
 
     public static void clearThreadLocal() {
         payload.remove();
     }
 
+
+    public static Map<String, Object> mapQueryParams(Map<String, Object> query, Map<String, String> map) {
+        Map<String, Object> newQuery = new HashMap<>();
+
+        for (Map.Entry<String, Object> entry : query.entrySet()) {
+            String key = entry.getKey();
+            Object value = entry.getValue();
+
+            if (key.equals("sort_column")) {
+
+                String sortCol = (String) value;
+                if (!map.containsKey(sortCol)) {
+                    throw new APIException(ErrorCodes.INVALID_PARAM, "Sort Column " + sortCol);
+                }
+
+                newQuery.put("sort_column", map.get(sortCol));
+                continue;
+            }
+
+            if (key.equals("sort_type")) {
+                if (((String) value).startsWith("d")) {
+                    newQuery.put(key, "desc");
+                }
+                continue;
+            }
+
+            if (key.startsWith("max")) {
+                String col = key.split("_", 2)[1];
+                if (map.containsKey(col)) {
+                    newQuery.put("max_" + map.get(col), value);
+                }
+            }
+
+            if (key.startsWith("min")) {
+                String col = key.split("_", 2)[1];
+                if (map.containsKey(col)) {
+                    newQuery.put("min_" + map.get(col), value);
+                }
+                continue;
+            }
+
+
+            newQuery.put(map.getOrDefault(key, key), value);
+        }
+        return newQuery;
+    }
+
+
+    public static Object cast(String value) {
+        String s = value.trim();
+
+        try {
+            return Integer.parseInt(s);
+        } catch (NumberFormatException ignored) {
+        }
+
+        try {
+            return Long.parseLong(s);
+        } catch (NumberFormatException ignored) {
+        }
+
+        try {
+            return new java.math.BigInteger(s);
+        } catch (NumberFormatException ignored) {
+        }
+
+        try {
+            return Double.parseDouble(s);
+        } catch (NumberFormatException ignored) {
+        }
+
+        try {
+            return new java.math.BigDecimal(s);
+        } catch (NumberFormatException ignored) {
+        }
+
+        return value;
+    }
+
+    public static void setResponse(Response response) {
+        getRequest().setAttribute("response", response);
+    }
+
+    @SafeVarargs
+    public static Map<String, Object> mergeMaps(Map<String, Object>... maps) {
+        Map<String, Object> resultMap = new HashMap<>();
+        for (Map<String, Object> map : maps) {
+            resultMap.putAll(map);
+        }
+
+        return resultMap;
+    }
+
+    public static void revokeTokens(HttpServletResponse resp, Jedis jedis, String email, Cookie[] cookies) {
+        jedis.spop("rftk:" + email);
+        for (Cookie cookieObj : cookies) {
+            cookieObj.setMaxAge(0);
+            resp.addCookie(cookieObj);
+        }
+    }
 }

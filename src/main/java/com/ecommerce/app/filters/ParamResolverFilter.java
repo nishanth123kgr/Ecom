@@ -9,7 +9,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringUtils;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.URLDecoder;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -36,7 +40,6 @@ public class ParamResolverFilter extends HttpFilter {
     }
 
 
-
     private HashMap<String, String> getPathVariablesMap(String requestURI) {
         HashMap<String, String> pathVariables = new HashMap<>();
 
@@ -49,7 +52,7 @@ public class ParamResolverFilter extends HttpFilter {
 
             String pathVariableName = pathPair[0];
             String pathVariableValue = pathPair[1];
-            if (!pathVariableKeyMap.containsKey(pathVariableName) || !StringUtils.isNumeric(pathVariableValue)) {
+            if (!pathVariableKeyMap.containsKey(pathVariableName) || (!pathVariableValue.equals("orders") && !StringUtils.isNumeric(pathVariableValue))) {
                 throw new APIException(400, "Invalid Request Path");
             }
 
@@ -69,6 +72,47 @@ public class ParamResolverFilter extends HttpFilter {
 
         return map;
     }
+
+
+    private Map<String, String> parseFormBody() throws IOException {
+        String contentType = request.getContentType();
+        if (contentType == null || !contentType.startsWith("application/x-www-form-urlencoded")) {
+            return new HashMap<>();
+        }
+
+        String charset = request.getCharacterEncoding() == null ? "UTF-8" : request.getCharacterEncoding();
+        String body = readBody(request, charset);
+        if (body == null || body.isEmpty()) return new HashMap<>();
+
+        Map<String, String> map = new HashMap<>();
+        String[] pairs = body.split("&");
+        for (String pair : pairs) {
+            int idx = pair.indexOf('=');
+            if (idx >= 0) {
+                String key = URLDecoder.decode(pair.substring(0, idx), charset);
+                String value = URLDecoder.decode(pair.substring(idx + 1), charset);
+                // if multiple values for same key you can store list; here we keep first
+                map.put(key, value);
+            } else {
+                String key = URLDecoder.decode(pair, charset);
+                map.put(key, "");
+            }
+        }
+        return map;
+    }
+
+    private String readBody(HttpServletRequest req, String charset) throws IOException {
+        StringBuilder sb = new StringBuilder();
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(req.getInputStream(), charset))) {
+            char[] buf = new char[1024];
+            int len;
+            while ((len = br.read(buf)) != -1) {
+                sb.append(buf, 0, len);
+            }
+        }
+        return sb.toString();
+    }
+
 
     private HashMap<String, String> getQueryParams() {
         HashMap<String, String> queryMap = new HashMap<>();
@@ -94,7 +138,13 @@ public class ParamResolverFilter extends HttpFilter {
             req.setAttribute("pathParams", getPathVariablesMap(normalizedURI));
         }
 
-        req.setAttribute("params", getParams());
+        HashMap<String, String> params = getParams();
+
+        if (params.isEmpty() && !req.getMethod().equals("GET") && !req.getMethod().equals("POST")) {
+            params = (HashMap<String, String>) parseFormBody();
+        }
+
+        req.setAttribute("params", params);
 
         req.setAttribute("queryParams", getQueryParams());
 

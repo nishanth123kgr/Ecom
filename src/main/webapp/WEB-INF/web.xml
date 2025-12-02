@@ -111,17 +111,27 @@
         <servlet-name>RefreshController</servlet-name>
         <url-pattern>/api/v1/auth/refresh</url-pattern>
     </servlet-mapping>
-    
+
     <servlet>
         <servlet-name>UsersController</servlet-name>
         <servlet-class>com.ecommerce.app.controllers.user.UsersController</servlet-class>
     </servlet>
-    
+
     <servlet-mapping>
         <servlet-name>UsersController</servlet-name>
         <url-pattern>/api/v1/users</url-pattern>
     </servlet-mapping>
 
+
+    <servlet>
+        <servlet-name>RequestsController</servlet-name>
+        <servlet-class>com.ecommerce.app.controllers.requests.RequestsController</servlet-class>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>RequestsController</servlet-name>
+        <url-pattern>/api/v1/requests</url-pattern>
+    </servlet-mapping>
 
     <servlet>
         <servlet-name>RequestController</servlet-name>
@@ -130,7 +140,146 @@
 
     <servlet-mapping>
         <servlet-name>RequestController</servlet-name>
-        <url-pattern>/api/v1/requests</url-pattern>
+        <url-pattern>/api/v1/requests/*</url-pattern>
     </servlet-mapping>
+
+
+    <servlet>
+        <servlet-name>SellersController</servlet-name>
+        <servlet-class>com.ecommerce.app.controllers.sellers.SellersController</servlet-class>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>SellersController</servlet-name>
+        <url-pattern>/api/v1/sellers</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>SellerController</servlet-name>
+        <servlet-class>com.ecommerce.app.controllers.sellers.SellerController</servlet-class>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>SellerController</servlet-name>
+        <url-pattern>/api/v1/sellers/*</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>BrandController</servlet-name>
+        <servlet-class>com.ecommerce.app.controllers.brands.BrandController</servlet-class>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>BrandController</servlet-name>
+        <url-pattern>/api/v1/brands/*</url-pattern>
+    </servlet-mapping>
+
+
+    <servlet>
+        <servlet-name>BrandsController</servlet-name>
+        <servlet-class>com.ecommerce.app.controllers.brands.BrandsController</servlet-class>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>BrandsController</servlet-name>
+        <url-pattern>/api/v1/brands</url-pattern>
+    </servlet-mapping>
+
+
+    <servlet>
+        <servlet-name>CategoriesController</servlet-name>
+        <servlet-class>com.ecommerce.app.controllers.categories.CategoriesController</servlet-class>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>CategoriesController</servlet-name>
+        <url-pattern>/api/v1/categories</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>CategoryController</servlet-name>
+        <servlet-class>com.ecommerce.app.controllers.categories.CategoryController</servlet-class>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>CategoryController</servlet-name>
+        <url-pattern>/api/v1/categories/*</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>ProductsController</servlet-name>
+        <servlet-class>com.ecommerce.app.controllers.products.ProductsController</servlet-class>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>ProductsController</servlet-name>
+        <url-pattern>/api/v1/products</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>ProductController</servlet-name>
+        <servlet-class>com.ecommerce.app.controllers.products.ProductController</servlet-class>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>ProductController</servlet-name>
+        <url-pattern>/api/v1/products/*</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>CartController</servlet-name>
+        <servlet-class>com.ecommerce.app.controllers.cart.CartController</servlet-class>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>CartController</servlet-name>
+        <url-pattern>/api/v1/cart</url-pattern>
+    </servlet-mapping>
+
+    <servlet-mapping>
+        <servlet-name>CartController</servlet-name>
+        <url-pattern>/api/v1/cart/*</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>CheckOutController</servlet-name>
+        <servlet-class>com.ecommerce.app.controllers.orders.CheckOutController</servlet-class>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>CheckOutController</servlet-name>
+        <url-pattern>/api/v1/checkout</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>AddressesController</servlet-name>
+        <servlet-class>com.ecommerce.app.controllers.address.AddressesController</servlet-class>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>AddressesController</servlet-name>
+        <url-pattern>/api/v1/addresses</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>AddressController</servlet-name>
+        <servlet-class>com.ecommerce.app.controllers.address.AddressController</servlet-class>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>AddressController</servlet-name>
+        <url-pattern>/api/v1/addresses/*</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>OrdersController</servlet-name>
+        <servlet-class>com.ecommerce.app.controllers.orders.OrdersController</servlet-class>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>OrdersController</servlet-name>
+        <url-pattern>/api/v1/orders</url-pattern>
+    </servlet-mapping>
+
 
 </web-app>

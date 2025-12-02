@@ -1,7 +1,6 @@
 package com.ecommerce.app.services;
 
 import com.ecommerce.app.dao.DAO;
-import com.ecommerce.app.dao.SellerDAO;
 import com.ecommerce.app.dao.UserDAO;
 import com.ecommerce.app.exceptions.APIException;
 import com.ecommerce.app.exceptions.ErrorCodes;
@@ -23,7 +22,7 @@ public class AuthService {
 
         String email = (String) params.get("email");
 
-        if (!Utils.isValidEmail(email)) {
+        if (Utils.isNotValidEmail(email)) {
             throw new APIException(ErrorCodes.INVALID_PARAM, email);
         }
 
@@ -41,7 +40,7 @@ public class AuthService {
 
         String email = (String) params.get("email");
 
-        if (!Utils.isValidEmail(email)) {
+        if (Utils.isNotValidEmail(email)) {
             throw new APIException(ErrorCodes.INVALID_PARAM, email);
         }
 
@@ -59,8 +58,12 @@ public class AuthService {
 
             user.getFirst().remove("password_hash");
 
+            Map<String, Object> searchQuery = new HashMap<>();
+
+            searchQuery.put("s.user_id", user.getFirst().get("id").toString());
+
             try {
-                int sellerId = new SellerDAO().getSellerIdByUserId((Integer) user.getFirst().get("id"));
+                int sellerId = (int) new SellerService().getSeller(searchQuery).get("seller_id");
                 user.getFirst().put("seller_id", sellerId);
             } catch (APIException e) {
                 if (e.getStatus() != 404 || !e.getMessage().startsWith("Seller")) {

@@ -41,13 +41,13 @@ public class AuthorizationFilter extends HttpFilter {
         Map<String, String> user = new HashMap<>();
         user.put(GET, USER_SELLER_ADMIN);
         user.put(PATCH, USER_SELLER_ADMIN);
-        user.put(DELETE, ADMIN);
+        user.put(DELETE, USER_SELLER);
 
         AUTHORIZATIONS.put(".*/users/[0-9]+$", user);
 
         Map<String, String> sellers = new HashMap<>();
 
-        sellers.put(GET, ADMIN);
+        sellers.put(GET, SELLER_ADMIN);
 
         AUTHORIZATIONS.put(".*/sellers$", sellers);
 
@@ -61,18 +61,51 @@ public class AuthorizationFilter extends HttpFilter {
 
         Map<String, String> sellerRequest = new HashMap<>();
 
-        sellerRequest.put(GET, ADMIN);
+        sellerRequest.put(GET, USER_SELLER_ADMIN);
         sellerRequest.put(POST, USER_SELLER);
 
         AUTHORIZATIONS.put(".*/requests$", sellerRequest);
 
         Map<String, String> requests = new HashMap<>();
 
-        requests.put(GET, SELLER_ADMIN);
+        requests.put(GET, USER_SELLER_ADMIN);
         requests.put(PATCH, ADMIN);
-        requests.put(DELETE, ADMIN);
+        requests.put(DELETE, USER_SELLER_ADMIN);
 
         AUTHORIZATIONS.put(".*/requests/[0-9]+$", requests);
+
+        Map<String, String> requestApprovals = new HashMap<>();
+
+        requestApprovals.put(GET, USER_SELLER_ADMIN);
+        requestApprovals.put(POST, ADMIN);
+
+        AUTHORIZATIONS.put(".*/requests/[0-9]+/approval$", requestApprovals);
+
+        Map<String, String> brands = new HashMap<>();
+        brands.put(GET, USER_SELLER_ADMIN);
+        brands.put(POST, ADMIN);
+
+        AUTHORIZATIONS.put(".*/brands", brands);
+
+        Map<String, String> brand = new HashMap<>();
+        brand.put(GET, USER_SELLER_ADMIN);
+        brand.put(PATCH, ADMIN);
+        brand.put(DELETE, ADMIN);
+
+        AUTHORIZATIONS.put(".*/brands/[0-9]+$", brand);
+
+        Map<String, String> categories = new HashMap<>();
+        categories.put(GET, USER_SELLER_ADMIN);
+        categories.put(POST, ADMIN);
+
+        AUTHORIZATIONS.put(".*/categories", categories);
+
+        Map<String, String> category = new HashMap<>();
+        category.put(GET, USER_SELLER_ADMIN);
+        category.put(PATCH, ADMIN);
+        category.put(DELETE, ADMIN);
+
+        AUTHORIZATIONS.put(".*/categories/[0-9]+$", category);
 
 
         Map<String, String> products = new HashMap<>();
@@ -81,16 +114,31 @@ public class AuthorizationFilter extends HttpFilter {
 
         AUTHORIZATIONS.put(".*/products$", products);
 
-        Map<String, String> productItem = new HashMap<>();
-        productItem.put(GET, USER_SELLER_ADMIN);
-        productItem.put(PUT, SELLER_ADMIN);
-        productItem.put(PATCH, SELLER_ADMIN);
-        productItem.put(DELETE, SELLER_ADMIN);
+        Map<String, String> product = new HashMap<>();
+        product.put(GET, USER_SELLER_ADMIN);
+        product.put(PUT, SELLER_ADMIN);
+        product.put(PATCH, SELLER_ADMIN);
+        product.put(DELETE, ADMIN);
 
-        AUTHORIZATIONS.put(".*/products/[0-9]+$", productItem);
+        AUTHORIZATIONS.put(".*/products/[0-9]+$", product);
+
+        Map<String, String> productVariants = new HashMap<>();
+        productVariants.put(GET, USER_SELLER_ADMIN);
+        productVariants.put(POST, SELLER_ADMIN);
+
+        AUTHORIZATIONS.put(".*/products/[0-9]+/productVariants$", productVariants);
+
+        Map<String, String> productVariant = new HashMap<>();
+        productVariant.put(GET, USER_SELLER_ADMIN);
+        productVariant.put(PUT, SELLER_ADMIN);
+        productVariant.put(PATCH, SELLER_ADMIN);
+        productVariant.put(DELETE, ADMIN);
+
+        AUTHORIZATIONS.put(".*/products/[0-9]+/productVariants/[0-9]+$", productVariant);
 
         Map<String, String> cart = new HashMap<>();
         cart.put(GET, USER);
+        cart.put(POST, USER);
 
         AUTHORIZATIONS.put(".*/cart$", cart);
 
@@ -101,6 +149,25 @@ public class AuthorizationFilter extends HttpFilter {
         cartItem.put(DELETE, USER);
 
         AUTHORIZATIONS.put(".*/cart/[0-9]+$", cartItem);
+
+        Map<String, String> checkout = new HashMap<>();
+        checkout.put(GET, USER_SELLER_ADMIN);
+        checkout.put(POST, USER);
+
+        AUTHORIZATIONS.put(".*/checkout$", checkout);
+
+        Map<String, String> addresses = new HashMap<>();
+        addresses.put(GET, USER_SELLER_ADMIN);
+        addresses.put(POST, USER_SELLER_ADMIN);
+
+        AUTHORIZATIONS.put(".*/addresses$", addresses);
+
+        Map<String, String> address = new HashMap<>();
+        address.put(GET, USER_SELLER_ADMIN);
+        address.put(PATCH, USER_SELLER_ADMIN);
+        address.put(DELETE, USER_SELLER_ADMIN);
+
+        AUTHORIZATIONS.put(".*/addresses/[0-9]+$", address);
 
         Map<String, String> orders = new HashMap<>();
 
@@ -127,7 +194,7 @@ public class AuthorizationFilter extends HttpFilter {
 
         String method = req.getMethod();
 
-        Map<String, Object> payload = Utils.getPayload(req);
+        Map<String, Object> payload = Utils.getPayload();
 
         String role = (String) payload.get("role");
 

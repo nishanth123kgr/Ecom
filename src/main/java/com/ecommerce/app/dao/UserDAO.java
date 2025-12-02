@@ -1,6 +1,7 @@
 package com.ecommerce.app.dao;
 
 import com.ecommerce.app.dao.wrappers.Criteria;
+import com.ecommerce.app.dao.wrappers.CriteriaBuilder;
 import com.ecommerce.app.dao.wrappers.Operator;
 import com.ecommerce.app.exceptions.APIException;
 import com.ecommerce.app.exceptions.ErrorCodes;
@@ -140,13 +141,13 @@ public class UserDAO extends DAO {
     }
 
     @Override
-    public List<Map<String, Object>> update(Map<String, String> data) {
-        return List.of(Map.of());
+    public List<Map<String, Object>> update(Map<String, Object> data, Map<String, Object> criteria) {
+        return update("users", data, new CriteriaBuilder().build(criteria));
     }
 
     @Override
-    public boolean delete(Map<String, String> data) {
-        return false;
+    public boolean delete(Map<String, Object> criteria) {
+        return delete("users", new CriteriaBuilder().build(criteria));
     }
 
     public List<Map<String, Object>> getUserByEmail(String email) {

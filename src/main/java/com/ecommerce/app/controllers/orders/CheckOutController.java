@@ -1,6 +1,6 @@
-package com.ecommerce.app.controllers.auth;
+package com.ecommerce.app.controllers.orders;
 
-import com.ecommerce.app.services.AuthService;
+import com.ecommerce.app.services.OrderService;
 import com.ecommerce.app.utils.Response;
 import com.ecommerce.app.utils.Utils;
 import jakarta.servlet.ServletException;
@@ -11,18 +11,12 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Map;
 
-public class RegisterController extends HttpServlet {
+public class CheckOutController extends HttpServlet {
+
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
-        AuthService authService = new AuthService();
-
-        Map<String, Object> responseData = authService.createUser(Utils.getParams());
-
-        Response response = new Response(200, "User Created Successfully.", responseData);
-
-        Utils.setResponse( response);
-
-
+        Map<String, Object> data = new OrderService().createOrder(Utils.getParams());
+        Utils.setResponse( new Response((boolean) data.get("success") ? 200 : 400, data));
     }
 }

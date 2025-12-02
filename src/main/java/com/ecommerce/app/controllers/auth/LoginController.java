@@ -14,7 +14,7 @@ public class LoginController extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) {
 
-        Map<String, Object> params = Utils.getParams(req);
+        Map<String, Object> params = Utils.getParams();
 
         Map<String, Object> tokens = new AuthService().verifyUser(params);
 

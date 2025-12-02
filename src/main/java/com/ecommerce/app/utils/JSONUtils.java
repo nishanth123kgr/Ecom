@@ -2,9 +2,11 @@ package com.ecommerce.app.utils;
 
 import com.ecommerce.app.exceptions.APIException;
 import com.ecommerce.app.exceptions.ErrorCodes;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import org.postgresql.util.PGobject;
 
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -53,13 +55,22 @@ public class JSONUtils {
             Map<String, Object> rowMap = new HashMap<>();
             int columnCount = md.getColumnCount();
             for (int i = 1; i <= columnCount; i++) {
-                rowMap.put(md.getColumnLabel(i), rs.getObject(i));
+                Object val = rs.getObject(i);
+                if (val instanceof PGobject pGobject) {
+                    if (pGobject.getType().equals("jsonb")) {
+                        rowMap.put(md.getColumnLabel(i), JSONUtils.OBJECT_MAPPER.readValue(pGobject.getValue(), Map.class));
+                        continue;
+                    }
+                }
+                rowMap.put(md.getColumnLabel(i), val);
             }
 
             return rowMap;
         } catch (SQLException e) {
             e.printStackTrace();
             throw new APIException(ErrorCodes.INTERNAL_SERVER_ERROR);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
         }
 
     }

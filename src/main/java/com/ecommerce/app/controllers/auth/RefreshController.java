@@ -34,14 +34,10 @@ public class RefreshController extends HttpServlet {
 
                 String[] keys = token.split("\\.");
                 String key = keys[keys.length - 1];
-                JedisPool pool = Utils.getJedisPool(req);
+                JedisPool pool = Utils.getJedisPool();
                 try (Jedis jedis = pool.getResource()) {
                     if (!jedis.sismember("rftk:" + email, "rftks:" + key)) {
-                        jedis.spop("rftk:" + email);
-                        for (Cookie cookieObj : cookies) {
-                            cookieObj.setMaxAge(0);
-                            resp.addCookie(cookieObj);
-                        }
+                        Utils.revokeTokens(resp, jedis, email, cookies);
                         throw new APIException(ErrorCodes.CUSTOM_CLIENT_ERROR, "Token theft detected, all sessions closed.");
                     } else {
                         Utils.refreshTokens(req, resp, Utils.convertClaims(payload.getClaims()), email, jedis, key);

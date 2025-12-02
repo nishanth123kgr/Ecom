@@ -34,7 +34,7 @@ public class AuthenticationFilter extends HttpFilter {
         }
 
         for (Cookie cookie : cookies) {
-            if (cookie.getName().equals("accessToken")) {
+            if (cookie.getName().equals(Utils.ACCESS_TOKEN)) {
                 String token = cookie.getValue();
                 DecodedJWT payload = JWTUtils.verifyJWT(token);
                 Map<String, Object> payloadMap = Utils.convertClaims(payload.getClaims());
